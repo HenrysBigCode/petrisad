@@ -1,4 +1,4 @@
-# logic/petri_net.py
+# logic/petri_net.py test
 
 class Place:
     # Représente une place dans le réseau de Petri
