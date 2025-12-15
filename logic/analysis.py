@@ -1,6 +1,6 @@
 # logic/analisis.py TO BE TESTED and modified
 
-from petri_net import PetriNet
+from logic.petri_net import PetriNet
 
 # return True si le réseau est en deadlock
 def is_deadlocked(net: PetriNet):
@@ -165,7 +165,7 @@ def reachable_markings(net): #????
 PetriNet.checkLoop = checkLoop
 PetriNet.getLoop = getLoop
 
-
+'''
 if __name__ == "__main__":
     print("=== DÉDUT DES TESTS DE BOUCLE ===")
 
@@ -233,3 +233,5 @@ if __name__ == "__main__":
         print("[FAILURE] Test 3 : Erreur, la boucle complexe n'a pas été détectée.")
 
     print("=== FIN DES TESTS ===")
+
+    '''

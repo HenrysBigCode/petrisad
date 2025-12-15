@@ -193,7 +193,7 @@ def build_state_space(net: PetriNet, visualizer: StateSpaceVisualizer):
 
 
 #Partie Test
-
+'''
 if __name__ == "__main__":
     print("Démarrage du test de visualisation avec moteur...")
 
@@ -244,3 +244,5 @@ if __name__ == "__main__":
     print("Affichage du graphe...")
     viz.show_interactive()
     print("Test terminé.")
+
+    '''

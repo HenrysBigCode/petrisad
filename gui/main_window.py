@@ -79,10 +79,10 @@ class PetriGraphicsView(QGraphicsView):
 
 
 class MainWindow(QWidget):
-    def __init__(self, petri_net, simulation):
+    def __init__(self, petri_net): #, simulation):
         super().__init__()
         self.net = petri_net
-        self.sim = simulation
+        #self.sim = simulation. Simulation does not exist anymore this has to be changed to the new cless for hooking up the buttons
 
         self.initUI()
 
