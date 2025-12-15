@@ -4,9 +4,9 @@ import math
 from PyQt5.QtWidgets import (QGraphicsLineItem, QGraphicsEllipseItem,
                              QGraphicsRectItem, QGraphicsTextItem, QGraphicsItem)
 from PyQt5.QtGui import QPen, QBrush, QColor, QPolygonF, QFont
-from PyQt5.QtCore import Qt, QLineF, QPointF 
+from PyQt5.QtCore import Qt, QLineF, QPointF # pyqtSignal n'est pas utilisé dans cette version, donc retiré.
 
-# création des constantes pour les dimensions des éléments
+# --- Constantes globales pour les styles (optionnel, mais bonne pratique) ---
 PLACE_RADIUS = 30
 TRANSITION_WIDTH = 60
 TRANSITION_HEIGHT = 20
@@ -277,7 +277,7 @@ class TransitionItem(QGraphicsRectItem):
         self.setPos(x, y) #centre du rectangle
         self.setFlag(QGraphicsItem.ItemIsMovable)
         self.setFlag(QGraphicsItem.ItemIsSelectable)
-        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges) # Important pour déplacer les arcs
 
         if name is None:
             self.name = f"T{TransitionItem.counter}"
@@ -316,3 +316,5 @@ class TransitionItem(QGraphicsRectItem):
         Nécessaire pour le calcul de la position des arcs.
         """
         return self.mapToScene(self.boundingRect().center())
+    
+    
