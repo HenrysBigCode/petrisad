@@ -105,9 +105,71 @@ def getLoop(self):
     
     
 def checkVivacity(self):
-    # Placeholder for vivacity detection logic
-    pass
+    """
+    Analyse la vivacité du réseau en simulant son exécution.
+    Retourne : 0 (Mort/Deadlock), 1 (Vivant faible), 2 (Vivant parfait)
+    """
+    # sauvegarder l'état initial des jetons pour remettre propre à la fin
+    initial_tokens = {p_name: p.tokens for p_name, p in self.places.items()}
+    
+    # état = tuple trié (Place, nb_jetons) pour être unique et hashable
+    start_state = tuple(sorted((p, self.places[p].tokens) for p in self.places))
+    
+    visited_states = {start_state}
+    queue = [start_state]
+    fired_transitions = set()
+    
+    max_states = 1000 
+    steps = 0
+    deadlock_found = False
 
+    while queue and steps < max_states:
+        current_state_tuple = queue.pop(0)
+        steps += 1
+        
+        # restaurer l'état (les jetons) pour tester les chemins depuis ici
+        for p_name, tokens in current_state_tuple:
+            self.places[p_name].tokens = tokens
+            
+        # récupérer les transitions activables
+        enabled_transitions = self.get_enabled()
+        
+        # détection de deadlock
+        if not enabled_transitions:
+            deadlock_found = True
+        
+        # simuler les tirs pour chaque possibilité
+        for t in enabled_transitions:
+            fired_transitions.add(t.name)
+
+            arcs_entrants = [a for a in self.arcs if a.transition == t and a.direction == "place_to_transition"]
+            arcs_sortants = [a for a in self.arcs if a.transition == t and a.direction == "transition_to_place"]
+            
+            t.fire(arcs_entrants, arcs_sortants)
+            
+            # capturer le nouvel état
+            new_state = tuple(sorted((p, self.places[p].tokens) for p in self.places))
+            
+            if new_state not in visited_states:
+                visited_states.add(new_state)
+                queue.append(new_state)
+            
+            # remettre les jetons comme avant le tir pour tester le prochain voisin
+            for p_name, tokens in current_state_tuple:
+                self.places[p_name].tokens = tokens
+
+    # restaurer l'état initial complet du réseau
+    for p_name, t_count in initial_tokens.items():
+        self.places[p_name].tokens = t_count
+
+    if deadlock_found:
+        return 0 
+    
+    all_transitions = set(self.transitions.keys())
+    if fired_transitions == all_transitions:
+        return 2 
+    else:
+        return 1 
     
 """
 def checkBoundedness(self):
@@ -164,11 +226,21 @@ def reachable_markings(net): #????
 
 PetriNet.checkLoop = checkLoop
 PetriNet.getLoop = getLoop
+PetriNet.checkVivacity = checkVivacity
 
-'''
+
+def print_vivacity_result(level):
+    if level == 0:
+        print(f"-> Résultat : {level} (DEADLOCK - Le réseau va se bloquer)")
+    elif level == 1:
+        print(f"-> Résultat : {level} (FAIBLE - Tourne, mais transitions inutilisées)")
+    elif level == 2:
+        print(f"-> Résultat : {level} (VIVANT - Tout fonctionne parfaitement)")
+
 if __name__ == "__main__":
     print("=== DÉDUT DES TESTS DE BOUCLE ===")
 
+    """
     # ---------------------------------------------------------
     # Cas 1 : Réseau sans boucle (Ligne droite)
     # P1 -> T1 -> P2
@@ -233,5 +305,32 @@ if __name__ == "__main__":
         print("[FAILURE] Test 3 : Erreur, la boucle complexe n'a pas été détectée.")
 
     print("=== FIN DES TESTS ===")
+    """
+    
 
-    '''
+
+    print("=== TESTS VIVACITÉ AVEC is_deadlocked ===")
+
+    # CAS 1 : Deadlock
+    print("\n[TEST 1] Réseau qui se bloque")
+    net1 = PetriNet()
+    net1.add_place("P1"); net1.places["P1"].tokens = 1
+    net1.add_place("P2")
+    net1.add_transition("T1")
+    net1.add_arc("P1", "T1")
+    net1.add_arc("T1", "P2") # P2 absorbe le jeton, plus rien ne sort
+    
+    lvl = net1.checkVivacity()
+    print_vivacity_result(lvl) # Attendu : 0
+
+    # CAS 2 : Vivant Parfait
+    print("\n[TEST 2] Réseau parfaitement vivant (Cycle)")
+    net2 = PetriNet()
+    net2.add_place("P1"); net2.places["P1"].tokens = 1
+    net2.add_place("P2")
+    net2.add_transition("T1"); net2.add_transition("T2")
+    net2.add_arc("P1", "T1"); net2.add_arc("T1", "P2")
+    net2.add_arc("P2", "T2"); net2.add_arc("T2", "P1")
+
+    lvl = net2.checkVivacity()
+    print_vivacity_result(lvl) # Attendu : 2
