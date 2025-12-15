@@ -1,5 +1,7 @@
 # logic/petri_net.py test
 
+
+   #couillettes
 class Place:
     # Représente une place dans le réseau de Petri
     def __init__(self, name):
