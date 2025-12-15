@@ -22,7 +22,7 @@ class PetriGraphicsView(QGraphicsView):
         self.main_window = main_window
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
-        self.setSceneRect(0, 0, 1000, 1000)
+        self.setSceneRect(0, 0, 1000, 1100)
         self.setRenderHints(QPainter.Antialiasing)
         self.mode = None
         self.temp_arc_start = None
@@ -150,13 +150,25 @@ class MainWindow(QWidget):
 
         #frame pour le bouton d'espace d'état 
         self.frame_state = QFrame(self)
-        self.frame_state.setGeometry(720, 460, 280, 100)
+        self.frame_state.setGeometry(720, 460, 280, 250)
         self.frame_state.setStyleSheet("background-color: #FFD166; border-radius: 10px;")
         self.state_layout = QFormLayout(self.frame_state)
 
         self.buttonState = QPushButton("Génerer les espaces d'états", self.frame_state)
         self.buttonState.setGeometry(20, 20, 240, 40)
         self.buttonState.setStyleSheet(self.STYLE_DEFAULT)
+
+        self.buttonLoad = QPushButton("Load", self.frame_state)
+        self.buttonLoad.setGeometry(20, 80, 240, 40)
+        self.buttonLoad.setStyleSheet(self.STYLE_DEFAULT)
+
+        self.buttonSave = QPushButton("Save", self.frame_state)
+        self.buttonSave.setGeometry(20, 140, 240, 40)
+        self.buttonSave.setStyleSheet(self.STYLE_DEFAULT)
+
+        self.buttonRapport = QPushButton("Génerer un rapport", self.frame_state)
+        self.buttonRapport.setGeometry(20, 200, 240, 40)
+        self.buttonRapport.setStyleSheet(self.STYLE_DEFAULT)
 
 
         self.view = PetriGraphicsView(self)
