@@ -1,5 +1,5 @@
 # gui/main_window.py
-
+import math
 from PyQt5.QtWidgets import (QWidget, QFrame, QPushButton,
                              QFormLayout, QLabel, QSpinBox)
 from PyQt5.QtGui import QFont, QColor, QPalette, QPainter
@@ -9,15 +9,14 @@ from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene
 from gui.items import PlaceItem, TransitionItem, ArcItem
 
 class Mode:
-    # Classe pour les différents modes d'interaction dans la vue graphique
-    SELECT = 0       # Move tool
+    #modes différents
+    SELECT = 0       
     ADD_PLACE = 1
     ADD_TRANSITION = 2
     ADD_ARC = 3
 
 
 class PetriGraphicsView(QGraphicsView):
-    # Classe pour la vue graphique du réseau de Petri, gère les interactions utilisateur
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
@@ -28,19 +27,24 @@ class PetriGraphicsView(QGraphicsView):
         self.mode = None
         self.temp_arc_start = None
 
-    # Définit le mode d'ajout (place, transition, arc)
+    # définit le mode d'ajout
     def set_mode(self, mode):
         self.mode = mode
         self.temp_arc_start = None
+        if mode is None:
+            self.setDragMode(QGraphicsView.RubberBandDrag) 
+            self.setCursor(Qt.ArrowCursor)
+        else:
+            self.setDragMode(QGraphicsView.NoDrag)
+            self.setCursor(Qt.CrossCursor)
 
-    # Gère les clics de souris pour ajouter des éléments ou sélectionner
+    #clique sur les boutons
     def mousePressEvent(self, event):
         pos = self.mapToScene(event.pos())
         item_under_mouse = self.scene.itemAt(pos, self.transform())
 
         if event.button() == Qt.LeftButton:
             if self.mode == 'place':
-                # create backend place via controller
                 backend_p = self.main_window.create_place_at(pos.x(), pos.y())
                 self.main_window.update_properties(backend_p['item'])
             elif self.mode == 'transition':
@@ -54,7 +58,6 @@ class PetriGraphicsView(QGraphicsView):
                         start = self.temp_arc_start
                         end = item_under_mouse
                         if type(start) != type(end):
-                            # delegate to controller so backend arc is created
                             arc_info = self.main_window.create_arc_between(start, end)
                             if arc_info:
                                 self.scene.addItem(arc_info['visual'])
@@ -65,9 +68,7 @@ class PetriGraphicsView(QGraphicsView):
                 else:
                     self.temp_arc_start = None
 
-            # selection
             if item_under_mouse:
-                # if clicked on a token dot or text, lift to parent
                 parent = item_under_mouse.parentItem()
                 if parent and isinstance(parent, (PlaceItem, TransitionItem)):
                     item_under_mouse = parent
@@ -79,10 +80,41 @@ class PetriGraphicsView(QGraphicsView):
 
 
 class MainWindow(QWidget):
-    def __init__(self, petri_net): #, simulation):
+    def __init__(self, petri_net):
         super().__init__()
         self.net = petri_net
-        #self.sim = simulation. Simulation does not exist anymore this has to be changed to the new cless for hooking up the buttons
+        #self.sim = simulation
+        
+        #si on est dans le mode d'ajout ou non
+        self.active_button = None 
+
+        #style en fonction du mode
+        self.STYLE_DEFAULT = """
+            QPushButton {
+                background-color: #EF476F; 
+                border-radius: 10px; 
+                color: whit;
+                font-family: Futura;
+                font-size: 12pt;
+            }
+            QPushButton:hover {
+                background-color: #ff7096;
+            }
+        """
+        
+        self.STYLE_ACTIVE = """
+            QPushButton {
+                background-color: #710921; 
+                border-radius: 10px; 
+                color: white; 
+                font-weight: bold;
+                font-family: Futura;
+                font-size: 12pt;
+                border: 2px solid #EF476F;
+            }
+        """
+
+        
 
         self.initUI()
 
@@ -90,51 +122,79 @@ class MainWindow(QWidget):
         self.setGeometry(100, 100, 1020, 650)
         self.setWindowTitle("Petri Editor (integrated)")
 
-        # Buttons frame
+        #frame pour mettre boutons
         self.frame_button = QFrame(self)
         self.frame_button.setGeometry(720, 20, 280, 250)
         self.frame_button.setStyleSheet("background-color: #FFD166; border-radius: 10px;")
 
+        #bouton ajout place
         self.buttonPlace = QPushButton("Ajouter une place", self.frame_button)
-        buttonPlace_font = QFont("Futura", 12)
-        self.buttonPlace.setFont(buttonPlace_font)
-        self.buttonPlace.setStyleSheet("background-color: #EF476F; border-radius: 10px;")
         self.buttonPlace.setGeometry(20, 20, 240, 40)
+        self.buttonPlace.setStyleSheet(self.STYLE_DEFAULT)
 
+        #bouton ajout transition
         self.buttonTransition = QPushButton("Ajouter une Transition", self.frame_button)
-        buttonTransition_font = QFont("Futura", 12)
-        self.buttonTransition.setFont(buttonTransition_font)
-        self.buttonTransition.setStyleSheet("background-color: #EF476F; border-radius: 10px;")
         self.buttonTransition.setGeometry(20, 80, 240, 40)
+        self.buttonTransition.setStyleSheet(self.STYLE_DEFAULT)
 
-        self.buttonArc = QPushButton("Créer un Arc", self.frame_button)
+        #bouton ajout arc
+        self.buttonArc = QPushButton("Ajouter un Arc", self.frame_button)
         self.buttonArc.setGeometry(20, 140, 240, 40)
-        buttonArc_font = QFont("Futura", 12)
-        self.buttonArc.setFont(buttonArc_font)
-        self.buttonArc.setStyleSheet("background-color: #EF476F; border-radius: 10px;")
+        self.buttonArc.setStyleSheet(self.STYLE_DEFAULT)
 
-        # Info frame
+        #frame pour mettre les infos des places, transitions et arcs
         self.frame_info = QFrame(self)
-        self.frame_info.setGeometry(720, 290, 280, 300)
-        self.frame_info.setStyleSheet("background-color: #5393CA; border-radius: 10px;")
+        self.frame_info.setGeometry(720, 290, 280, 150)
+        self.frame_info.setStyleSheet("background-color: #FFD166; border-radius: 10px;")
         self.info_layout = QFormLayout(self.frame_info)
 
-        # view
+        #frame pour le bouton d'espace d'état 
+        self.frame_state = QFrame(self)
+        self.frame_state.setGeometry(720, 460, 280, 100)
+        self.frame_state.setStyleSheet("background-color: #FFD166; border-radius: 10px;")
+        self.state_layout = QFormLayout(self.frame_state)
+
+        self.buttonState = QPushButton("Génerer les espaces d'états", self.frame_state)
+        self.buttonState.setGeometry(20, 20, 240, 40)
+        self.buttonState.setStyleSheet(self.STYLE_DEFAULT)
+
+
         self.view = PetriGraphicsView(self)
         self.view.setParent(self)
         self.view.setGeometry(20, 20, 680, 760)
 
-        # connect buttons
-        self.buttonPlace.clicked.connect(lambda: self.view.set_mode('place'))
-        self.buttonTransition.clicked.connect(lambda: self.view.set_mode('transition'))
-        self.buttonArc.clicked.connect(lambda: self.view.set_mode('arc'))
+        self.buttonPlace.clicked.connect(lambda: self.handle_mode_click('place', self.buttonPlace))
+        self.buttonTransition.clicked.connect(lambda: self.handle_mode_click('transition', self.buttonTransition))
+        self.buttonArc.clicked.connect(lambda: self.handle_mode_click('arc', self.buttonArc))
 
-        # mapping visual->backend: store dict name->item
-        self.visual_places = {}   # name -> PlaceItem
+        self.visual_places = {}
         self.visual_transitions = {}
-        self.visual_arcs = []     # list of ArcItem
+        self.visual_arcs = []
 
-    # ------- Controller methods (bridge GUI <-> backend) -------
+        
+
+    def handle_mode_click(self, mode, button):
+
+        # désactivation du mode ajout
+        if self.active_button == button:
+            self.view.set_mode(None)     # retour au mode sélection par défaut
+            button.setStyleSheet(self.STYLE_DEFAULT) # retour à la couleur rose
+            self.active_button = None    # plus aucun bouton actif
+            print("Mode: Sélection / Déplacement")
+
+        # activation du mode ajout
+        else:
+            if self.active_button:
+                self.active_button.setStyleSheet(self.STYLE_DEFAULT)
+            
+            # activation du bouton
+            self.view.set_mode(mode)
+            
+            button.setStyleSheet(self.STYLE_ACTIVE) 
+            self.active_button = button # on mémorise que c'est lui l'actif
+            print(f"Mode: Ajout de {mode}")
+
+
     def create_place_at(self, x, y):
         # create backend place then visual
         backend_place = self.net.add_place()
