@@ -9,13 +9,6 @@ from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QFileDialog
 from gui.items import PlaceItem, TransitionItem, ArcItem
 from logic.updownload import save_petri_net
 
-class Mode:
-    #modes différents
-    SELECT = 0       
-    ADD_PLACE = 1
-    ADD_TRANSITION = 2
-    ADD_ARC = 3
-
 
 class PetriGraphicsView(QGraphicsView):
     def __init__(self, main_window):
@@ -115,9 +108,8 @@ class MainWindow(QWidget):
             }
         """
 
-        
-
         self.initUI()
+
 
     def initUI(self):
         self.setGeometry(100, 100, 1020, 650)
@@ -171,6 +163,7 @@ class MainWindow(QWidget):
         self.buttonRapport = QPushButton("Génerer un rapport", self.frame_state)
         self.buttonRapport.setGeometry(20, 200, 240, 40)
         self.buttonRapport.setStyleSheet(self.STYLE_DEFAULT)
+        self.buttonRapport.clicked.connect(self.reset_editor)
 
 
         self.view = PetriGraphicsView(self)
@@ -184,6 +177,15 @@ class MainWindow(QWidget):
         self.visual_places = {}
         self.visual_transitions = {}
         self.visual_arcs = []
+
+
+    # fonction utile pour restet l'éditeur
+    def reset_editor(self):
+        self.view.scene.clear()  # Clear visual items
+        self.net.wipe() # Clear backend
+        # Reset editor state
+        self.clear_properties()
+        self.temp_arc_start = None
 
     
     # sauvegarde du réseau de Petri a partir d'une fonction de updownload
@@ -206,7 +208,6 @@ class MainWindow(QWidget):
     
 
     def handle_mode_click(self, mode, button):
-
         # désactivation du mode ajout
         if self.active_button == button:
             self.view.set_mode(None)     # retour au mode sélection par défaut
