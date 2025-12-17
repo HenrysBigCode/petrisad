@@ -137,8 +137,7 @@ class PlaceItem(QGraphicsEllipseItem):
 
         self.label = QGraphicsTextItem(self.name, parent=self)
         self.label.setDefaultTextColor(Qt.black)
-        self.label.setPos(-self.label.boundingRect().width()/2, NODE_LABEL_OFFSET_Y)
-
+        self.label.setPos(-self.label.boundingRect().width()/2, -55)
         self.draw_tokens()
 
     def add_arc(self, arc): self.arcs.append(arc)
@@ -208,8 +207,8 @@ class TransitionItem(QGraphicsRectItem):
 
         self.label = QGraphicsTextItem(self.name, parent=self)
         self.label.setDefaultTextColor(Qt.black)
-        self.label.setPos(-self.label.boundingRect().width()/2, NODE_LABEL_OFFSET_Y)
-
+        self.label.setPos(-self.label.boundingRect().width()/2, -40)
+        
     def add_arc(self, arc): self.arcs.append(arc)
     def remove_arc(self, arc):
         if arc in self.arcs: self.arcs.remove(arc)

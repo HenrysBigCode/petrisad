@@ -1,12 +1,12 @@
 # gui/main_window.py
 import math
 from PyQt5.QtWidgets import (QWidget, QFrame, QPushButton,
-                             QFormLayout, QLabel, QSpinBox, QHBoxLayout, QVBoxLayout)
-from PyQt5.QtGui import QFont, QColor, QPalette, QPainter, QPen
+                             QFormLayout, QLabel, QSpinBox, QHBoxLayout, QVBoxLayout,
+                             QGraphicsView, QGraphicsScene, QFileDialog, QInputDialog, QComboBox)
+from PyQt5.QtGui import QFont, QColor, QPalette, QPainter, QPen, QBrush
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QFileDialog
-
 from gui.items import PlaceItem, TransitionItem, ArcItem
+from logic.coloring import get_graph_coloring
 from logic.updownload import save_petri_net
 
 class Mode:
@@ -32,7 +32,7 @@ class PetriGraphicsView(QGraphicsView):
         self.btn_clear_all = QPushButton("Effacer tout", self)
         self.btn_clear_all.setStyleSheet("""
             QPushButton {
-                background-color: #FFD166; 
+                background-color: #EF476F; 
                 color: white; 
                 border-radius: 5px; 
                 padding: 8px;
@@ -40,7 +40,7 @@ class PetriGraphicsView(QGraphicsView):
                 font-weight: bold;
             }
             QPushButton:hover {
-                background-color: #EF476F;
+                background-color: #FFD166;
             }
         """)
         self.btn_clear_all.move(10, 10)
@@ -68,31 +68,38 @@ class PetriGraphicsView(QGraphicsView):
 
         if event.button() == Qt.LeftButton:
             if self.mode == 'place':
-                backend_p = self.main_window.create_place_at(pos.x(), pos.y())
-                self.main_window.update_properties(backend_p['item'])
+                res = self.main_window.create_place_at(pos.x(), pos.y())
+                if res:
+                    self.main_window.update_properties(res['item'])
             elif self.mode == 'transition':
-                backend_t = self.main_window.create_transition_at(pos.x(), pos.y())
-                self.main_window.update_properties(backend_t['item'])
+                res = self.main_window.create_transition_at(pos.x(), pos.y())
+                if res:
+                    self.main_window.update_properties(res['item'])
             elif self.mode == 'arc':
-                if isinstance(item_under_mouse, (PlaceItem, TransitionItem)):
-                    if self.temp_arc_start is None:
-                        self.temp_arc_start = item_under_mouse
-                    else:
-                        start = self.temp_arc_start
-                        end = item_under_mouse
-                        if type(start) != type(end):
-                            arc_info = self.main_window.create_arc_between(start, end)
-                            if arc_info:
-                                self.main_window.update_properties(arc_info['visual'])
-                        self.temp_arc_start = None
+                if item_under_mouse:
+                    target = item_under_mouse
+                    if target.parentItem() and isinstance(target.parentItem(), (PlaceItem, TransitionItem)):
+                        target = target.parentItem()
+
+                    if isinstance(target, (PlaceItem, TransitionItem)):
+                        if self.temp_arc_start is None:
+                            self.temp_arc_start = target
+                        else:
+                            start = self.temp_arc_start
+                            end = target
+                            if type(start) != type(end):
+                                arc_info = self.main_window.create_arc_between(start, end)
+                                if arc_info:
+                                    self.main_window.update_properties(arc_info['visual'])
+                            self.temp_arc_start = None
                 else:
                     self.temp_arc_start = None
 
             if item_under_mouse:
-                parent = item_under_mouse.parentItem()
-                if parent and isinstance(parent, (PlaceItem, TransitionItem)):
-                    item_under_mouse = parent
-                self.main_window.update_properties(item_under_mouse)
+                target = item_under_mouse
+                if target.parentItem() and isinstance(target.parentItem(), (PlaceItem, TransitionItem)):
+                    target = target.parentItem()
+                self.main_window.update_properties(target)
             else:
                 self.main_window.clear_properties()
 
@@ -103,12 +110,8 @@ class MainWindow(QWidget):
     def __init__(self, petri_net):
         super().__init__()
         self.net = petri_net
-        #self.sim = simulation
-        
-        #si on est dans le mode d'ajout ou non
         self.active_button = None 
 
-        #style en fonction du mode
         self.STYLE_DEFAULT = """
             QPushButton {
                 background-color: #EF476F; 
@@ -118,11 +121,8 @@ class MainWindow(QWidget):
                 font-size: 12pt;
                 min-height: 40px;
             }
-            QPushButton:hover {
-                background-color: #ff7096;
-            }
+            QPushButton:hover { background-color: #ff7096; }
         """
-        
         self.STYLE_ACTIVE = """
             QPushButton {
                 background-color: #710921; 
@@ -136,9 +136,6 @@ class MainWindow(QWidget):
             }
         """
 
-        # 3eme style pour mettre les noms des places transitions et des arc en noir
-        self.STYLE_TEXT_BLACK = "color: black; font-weight: bold; font-family: Futura; border: none;"
-
         self.initUI()
 
     def initUI(self):
@@ -147,7 +144,6 @@ class MainWindow(QWidget):
         self.setStyleSheet("background-color: #073B4C;")
 
         self.main_layout = QHBoxLayout(self)
-
         self.view = PetriGraphicsView(self)
         self.view.setStyleSheet("background-color: white; border-radius: 10px;")
         self.main_layout.addWidget(self.view, stretch=4)
@@ -155,60 +151,49 @@ class MainWindow(QWidget):
         self.layout_menu = QVBoxLayout()
         self.layout_menu.setSpacing(20)
 
-        #frame pour mettre boutons
         self.frame_button = QFrame()
         self.frame_button.setFixedWidth(320)
         self.frame_button.setStyleSheet("background-color: #FFD166; border-radius: 10px;")
         self.btn_layout = QVBoxLayout(self.frame_button)
 
         self.buttonPlace = QPushButton("Ajouter une place")
-        self.buttonPlace.setStyleSheet(self.STYLE_DEFAULT)
         self.buttonTransition = QPushButton("Ajouter une Transition")
-        self.buttonTransition.setStyleSheet(self.STYLE_DEFAULT)
         self.buttonArc = QPushButton("Ajouter un Arc")
-        self.buttonArc.setStyleSheet(self.STYLE_DEFAULT)
 
-        self.btn_layout.addWidget(self.buttonPlace)
-        self.btn_layout.addWidget(self.buttonTransition)
-        self.btn_layout.addWidget(self.buttonArc)
+        for b in [self.buttonPlace, self.buttonTransition, self.buttonArc]:
+            b.setStyleSheet(self.STYLE_DEFAULT)
+            self.btn_layout.addWidget(b)
+
         self.layout_menu.addWidget(self.frame_button)
 
-        #frame pour mettre les infos des places, transitions et arcs
         self.frame_info = QFrame()
         self.frame_info.setFixedWidth(320)
-        self.frame_info.setMinimumHeight(350)
+        self.frame_info.setMinimumHeight(400) # Légèrement plus grand
         self.frame_info.setStyleSheet("background-color: #FFD166; border-radius: 15px;")
         self.info_layout = QFormLayout(self.frame_info)
         self.info_layout.setContentsMargins(20, 20, 20, 20)
         self.layout_menu.addWidget(self.frame_info)
 
-        #frame pour le bouton d'espace d'état 
         self.frame_state = QFrame()
         self.frame_state.setFixedWidth(320)
         self.frame_state.setStyleSheet("background-color: #FFD166; border-radius: 10px;")
         self.state_v_layout = QVBoxLayout(self.frame_state)
 
+        self.buttonColorAlgo = QPushButton("Coloration Graphe (CPN)")
         self.buttonState = QPushButton("Génerer les espaces d'états")
-        self.buttonState.setStyleSheet(self.STYLE_DEFAULT)
-
         self.buttonLoad = QPushButton("Load")
-        self.buttonLoad.setStyleSheet(self.STYLE_DEFAULT)
-
         self.buttonSave = QPushButton("Save")
-        self.buttonSave.setStyleSheet(self.STYLE_DEFAULT)
-        self.buttonSave.clicked.connect(self.save_action)
-
         self.buttonRapport = QPushButton("Génerer un rapport")
-        self.buttonRapport.setStyleSheet(self.STYLE_DEFAULT)
 
-        self.state_v_layout.addWidget(self.buttonState)
-        self.state_v_layout.addWidget(self.buttonLoad)
-        self.state_v_layout.addWidget(self.buttonSave)
-        self.state_v_layout.addWidget(self.buttonRapport)
+        for b in [self.buttonColorAlgo, self.buttonState, self.buttonLoad, self.buttonSave, self.buttonRapport]:
+            b.setStyleSheet(self.STYLE_DEFAULT)
+            self.state_v_layout.addWidget(b)
+
+        self.buttonSave.clicked.connect(self.save_action)
+        self.buttonColorAlgo.clicked.connect(self.apply_algorithmic_coloring)
         
         self.layout_menu.addWidget(self.frame_state)
         self.layout_menu.addStretch()
-
         self.main_layout.addLayout(self.layout_menu)
 
         self.buttonPlace.clicked.connect(lambda: self.handle_mode_click('place', self.buttonPlace))
@@ -219,19 +204,16 @@ class MainWindow(QWidget):
         self.visual_transitions = {}
         self.visual_arcs = []
 
-    # sauvegarde du réseau de Petri a partir d'une fonction de updownload
     def save_action(self):
         filename, _ = QFileDialog.getSaveFileName(self, "Save Petri Net", "", "Petri Net (*.json)")
         if filename:
             save_petri_net(filename = filename, scene = self.view.scene, net = self.net)
 
     def handle_mode_click(self, mode, button):
-        # désactivation du mode ajout
         if self.active_button == button:
             self.view.set_mode(None)
             button.setStyleSheet(self.STYLE_DEFAULT)
             self.active_button = None
-        # activation du mode ajout
         else:
             if self.active_button:
                 self.active_button.setStyleSheet(self.STYLE_DEFAULT)
@@ -240,19 +222,38 @@ class MainWindow(QWidget):
             self.active_button = button
 
     def create_place_at(self, x, y):
-        backend_place = self.net.add_place()
-        item = PlaceItem(x, y, name=backend_place.name)
-        self.view.scene.addItem(item)
-        self.visual_places[backend_place.name] = item
-        return {'backend': backend_place, 'item': item}
+        name, ok = QInputDialog.getText(self, 'Nouvelle Place', 'Entrez le nom :')
+        if ok and name:
+            base_name = name
+            counter = 1
+            while name in self.visual_places or name in self.visual_transitions:
+                name = f"{base_name}.{counter}"
+                counter += 1
+            
+            bp = self.net.add_place(name=name)
+            item = PlaceItem(x, y, name=name)
+            item.color_set = "Integer" 
+            self.view.scene.addItem(item)
+            self.visual_places[name] = item
+            return {'backend': bp, 'item': item}
+        return None
 
     def create_transition_at(self, x, y):
-        backend_t = self.net.add_transition()
-        item = TransitionItem(x, y, name=backend_t.name)
-        self.view.scene.addItem(item)
-        self.visual_transitions[backend_t.name] = item
-        return {'backend': backend_t, 'item': item}
-
+        name, ok = QInputDialog.getText(self, 'Nouvelle Transition', 'Entrez le nom :')
+        if ok and name:
+            base_name = name
+            counter = 1
+            while name in self.visual_places or name in self.visual_transitions:
+                name = f"{base_name}.{counter}"
+                counter += 1
+                
+            bt = self.net.add_transition(name=name)
+            item = TransitionItem(x, y, name=name)
+            self.view.scene.addItem(item)
+            self.visual_transitions[name] = item
+            return {'backend': bt, 'item': item}
+        return None
+    
     def create_arc_between(self, start_item, end_item):
         try:
             arc_backend = self.net.add_arc(start_item.name, end_item.name)
@@ -262,9 +263,7 @@ class MainWindow(QWidget):
             end_item.add_arc(visual)
             self.visual_arcs.append(visual)
             return {'backend': arc_backend, 'visual': visual}
-        except Exception as e:
-            print("Arc failed:", e)
-            return None
+        except: return None
 
     def clear_properties(self):
         while self.info_layout.count():
@@ -281,8 +280,7 @@ class MainWindow(QWidget):
                 self.net.delete_transition(name)
                 self.visual_transitions.pop(name, None)
             for arc in item.arcs[:]:
-                if arc in self.view.scene.items():
-                    self.view.scene.removeItem(arc)
+                if arc in self.view.scene.items(): self.view.scene.removeItem(arc)
                 other = arc.start_item if arc.start_item != item else arc.end_item
                 other.remove_arc(arc)
             self.view.scene.removeItem(item)
@@ -290,8 +288,7 @@ class MainWindow(QWidget):
             self.net.arcs = [a for a in self.net.arcs if not (
                 (a.place.name == item.start_item.name and a.transition.name == item.end_item.name) or
                 (a.place.name == item.end_item.name and a.transition.name == item.start_item.name))]
-            item.start_item.remove_arc(item)
-            item.end_item.remove_arc(item)
+            item.start_item.remove_arc(item); item.end_item.remove_arc(item)
             self.view.scene.removeItem(item)
         self.clear_properties()
         self.view.scene.update()
@@ -299,122 +296,71 @@ class MainWindow(QWidget):
     def update_properties(self, item):
         self.clear_properties()
         style_noir = "color: black; font-weight: bold; font-family: Futura; border: none;"
+        style_btn_xql = "QPushButton { background-color: transparent; color: black; font-size: 24pt; font-weight: bold; border: 3px solid black; border-radius: 8px; min-width: 60px; min-height: 50px; } QPushButton:hover { background-color: #e6bc5c; }"
 
         lbl_prop = QLabel("PROPRIÉTÉS")
-        lbl_prop.setAlignment(Qt.AlignCenter)
-        lbl_prop.setStyleSheet(style_noir + "font-size: 16pt; margin-bottom: 10px; text-decoration: underline;")
+        lbl_prop.setStyleSheet(style_noir + "font-size: 16pt; text-decoration: underline;")
         self.info_layout.addRow(lbl_prop)
 
         if isinstance(item, PlaceItem):
-            lbl_id = QLabel(f"ID : {item.name}")
-            lbl_id.setAlignment(Qt.AlignCenter)
-            lbl_id.setStyleSheet(style_noir + "font-size: 13pt;")
-            self.info_layout.addRow(lbl_id)
-
-            lbl_type = QLabel("TYPE : PLACE")
-            lbl_type.setAlignment(Qt.AlignCenter)
-            lbl_type.setStyleSheet(style_noir + "font-size: 10pt; color: #444; margin-bottom: 10px;")
-            self.info_layout.addRow(lbl_type)
-
-            layout_jetons = QHBoxLayout()
-            btn_moins = QPushButton("-")
-            btn_plus = QPushButton("+")
-            lbl_jeton = QLabel(f"{item.tokens} Jeton{'s' if item.tokens > 1 else ''}")
+            self.info_layout.addRow(QLabel(f"ID : {item.name}", styleSheet=style_noir))
             
-            style_btn = "QPushButton { background-color: transparent; color: black; font-size: 20pt; font-weight: bold; border: 2px solid black; border-radius: 5px; min-width: 40px; } QPushButton:hover { background-color: #e6bc5c; }"
-            btn_moins.setStyleSheet(style_btn)
-            btn_plus.setStyleSheet(style_btn)
+            # CHOIX COLOR SET (Pas de coloration auto ici)
+            self.info_layout.addRow(QLabel("COLOR SET (Σ) :", styleSheet=style_noir))
+            combo = QComboBox()
+            combo.addItems(["Integer", "String", "Boolean", "Complex"])
+            combo.setCurrentText(getattr(item, 'color_set', 'Integer'))
+            combo.setStyleSheet("background-color: white; color: black; border-radius: 5px; padding: 5px;")
             
-            # Application de la taille du texte en fonction du nombre de jetons
-            font_size = "12pt"
-            if item.tokens > 5:
-                font_size = "18pt"
-            lbl_jeton.setStyleSheet(style_noir + f"font-size: {font_size};")
-            lbl_jeton.setAlignment(Qt.AlignCenter)
+            def on_type_change(t):
+                item.color_set = t
+            combo.currentTextChanged.connect(on_type_change)
+            self.info_layout.addRow(combo)
 
-            def incrementer():
-                v = item.tokens + 1
-                self.net.set_tokens(item.name, v)
-                item.set_tokens(v)
-                # Mise à jour de la taille si > 5
-                new_size = "12pt" if v <= 5 else "18pt"
-                lbl_jeton.setStyleSheet(style_noir + f"font-size: {new_size};")
-                lbl_jeton.setText(f"{v} Jeton{'s' if v > 1 else ''}")
-
-            def decrementer():
-                if item.tokens > 0:
-                    v = item.tokens - 1
-                    self.net.set_tokens(item.name, v)
-                    item.set_tokens(v)
-                    # Mise à jour de la taille si > 5
-                    new_size = "12pt" if v <= 5 else "18pt"
-                    lbl_jeton.setStyleSheet(style_noir + f"font-size: {new_size};")
-                    lbl_jeton.setText(f"{v} Jeton{'s' if v > 1 else ''}")
-
-            btn_plus.clicked.connect(incrementer)
-            btn_moins.clicked.connect(decrementer)
-
-            layout_jetons.addWidget(btn_moins)
-            layout_jetons.addStretch()
-            layout_jetons.addWidget(lbl_jeton)
-            layout_jetons.addStretch()
-            layout_jetons.addWidget(btn_plus)
-            
-            container = QWidget()
-            container.setLayout(layout_jetons)
-            self.info_layout.addRow(container)
-
-        elif isinstance(item, TransitionItem):
-            lbl_id = QLabel(f"ID : {item.name}")
-            lbl_id.setAlignment(Qt.AlignCenter)
-            lbl_id.setStyleSheet(style_noir + "font-size: 13pt;")
-            self.info_layout.addRow(lbl_id)
-
-            lbl_type = QLabel("TYPE : TRANSITION")
-            lbl_type.setAlignment(Qt.AlignCenter)
-            lbl_type.setStyleSheet(style_noir + "font-size: 10pt; color: #444;")
-            self.info_layout.addRow(lbl_type)
-
-        elif isinstance(item, ArcItem):
-            lbl_id = QLabel("ARC")
-            lbl_id.setAlignment(Qt.AlignCenter)
-            lbl_id.setStyleSheet(style_noir + "font-size: 13pt;")
-            self.info_layout.addRow(lbl_id)
-
-            lbl_type = QLabel("TYPE : LIAISON")
-            lbl_type.setAlignment(Qt.AlignCenter)
-            lbl_type.setStyleSheet(style_noir + "font-size: 10pt; color: #444;")
-            self.info_layout.addRow(lbl_type)
-            
-            layout_poids = QHBoxLayout()
+            # jetons
+            self.info_layout.addRow(QLabel("JETONS :", styleSheet=style_noir))
+            layout_j = QHBoxLayout()
             btn_m = QPushButton("-")
             btn_p = QPushButton("+")
-            lbl_p = QLabel(f"Poids: {item.weight}")
+            btn_m.setStyleSheet(style_btn_xql)
+            btn_p.setStyleSheet(style_btn_xql)
             
-            btn_m.setStyleSheet("QPushButton { background-color: transparent; color: black; font-size: 18pt; font-weight: bold; border: 2px solid black; border-radius: 5px; min-width: 35px; }")
-            btn_p.setStyleSheet("QPushButton { background-color: transparent; color: black; font-size: 18pt; font-weight: bold; border: 2px solid black; border-radius: 5px; min-width: 35px; }")
-            lbl_p.setStyleSheet(style_noir + "font-size: 11pt;")
+            lbl_j = QLabel(f"{item.tokens}")
+            lbl_j.setAlignment(Qt.AlignCenter)
+            lbl_j.setStyleSheet(style_noir + f"font-size: {'22pt' if item.tokens > 5 else '16pt'};")
             
-            def upd_arc(delta):
-                nv = max(1, item.weight + delta)
-                item.set_weight(nv)
-                for a in self.net.arcs:
-                    if (a.place.name == item.start_item.name and a.transition.name == item.end_item.name) or (a.place.name == item.end_item.name and a.transition.name == item.start_item.name):
-                        a.weight = nv
-                        break
-                lbl_p.setText(f"Poids: {nv}")
+            def upd(v):
+                new_v = max(0, item.tokens + v)
+                self.net.set_tokens(item.name, new_v)
+                item.set_tokens(new_v)
+                lbl_j.setText(f"{new_v}")
+                lbl_j.setStyleSheet(style_noir + f"font-size: {'22pt' if new_v > 5 else '16pt'};")
 
-            btn_p.clicked.connect(lambda: upd_arc(1))
-            btn_m.clicked.connect(lambda: upd_arc(-1))
+            btn_p.clicked.connect(lambda: upd(1))
+            btn_m.clicked.connect(lambda: upd(-1))
+            layout_j.addWidget(btn_m); layout_j.addStretch(); layout_j.addWidget(lbl_j); layout_j.addStretch(); layout_j.addWidget(btn_p)
+            c = QWidget(); c.setLayout(layout_j); self.info_layout.addRow(c)
 
-            layout_poids.addWidget(btn_m)
-            layout_poids.addWidget(lbl_p)
-            layout_poids.addWidget(btn_p)
-            c_p = QWidget()
-            c_p.setLayout(layout_poids)
-            self.info_layout.addRow(c_p)
+        elif isinstance(item, TransitionItem):
+            self.info_layout.addRow(QLabel(f"ID : {item.name}", styleSheet=style_noir))
 
-        btn_delete = QPushButton("SUPPRIMER")
-        btn_delete.setStyleSheet("QPushButton { background-color: transparent; color: black; font-weight: bold; font-family: Futura; border: 2px solid black; border-radius: 8px; padding: 10px; margin-top: 20px; } QPushButton:hover { background-color: black; color: #FFD166; }")
-        btn_delete.clicked.connect(lambda: self.delete_item(item))
-        self.info_layout.addRow(btn_delete)
+        btn_del = QPushButton("SUPPRIMER")
+        btn_del.setStyleSheet("background-color: transparent; color: black; font-weight: bold; border: 2px solid black; border-radius: 8px; padding: 10px; margin-top: 20px;")
+        btn_del.clicked.connect(lambda: self.delete_item(item)) 
+        self.info_layout.addRow(btn_del)
+
+    def apply_algorithmic_coloring(self):
+        palette = {
+            "Integer": QColor("#118AB2"), "String": QColor("#06D6A0"),
+            "Boolean": QColor("#FFD166"), "Complex": QColor("#EF476F"),
+            "Guard": QColor("#073B4C")
+        }
+        coloring_map = get_graph_coloring(self.net)
+        for name, data_type in coloring_map.items():
+            item = self.visual_places.get(name) or self.visual_transitions.get(name)
+            if item:
+                final_type = getattr(item, 'color_set', data_type)
+                item.setBrush(QBrush(palette.get(final_type, QColor("#CCCCCC"))))
+                item.setPen(QPen(Qt.white, 1, Qt.DashLine) if final_type == "Guard" else QPen(Qt.black, 2))
+        self.view.scene.update()
+        print("Coloration CPN appliquée.")
