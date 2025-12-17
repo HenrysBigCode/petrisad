@@ -11,7 +11,7 @@ from logic.updownload import save_petri_net
 
 class Mode:
     #modes différents
-    SELECT = 0       
+    SELECT = 0
     ADD_PLACE = 1
     ADD_TRANSITION = 2
     ADD_ARC = 3
@@ -28,16 +28,31 @@ class PetriGraphicsView(QGraphicsView):
         self.mode = None
         self.temp_arc_start = None
 
-    # définit le mode d'ajout
-    def set_mode(self, mode):
-        self.mode = mode
-        self.temp_arc_start = None
-        if mode is None:
-            self.setDragMode(QGraphicsView.RubberBandDrag) 
-            self.setCursor(Qt.ArrowCursor)
-        else:
-            self.setDragMode(QGraphicsView.NoDrag)
-            self.setCursor(Qt.CrossCursor)
+        # --- AJOUT DU BOUTON EFFACER TOUT ---
+        self.btn_clear_all = QPushButton("Effacer tout", self)
+        # On lui donne un style un peu différent pour qu'il se distingue sur fond blanc
+        self.btn_clear_all.setStyleSheet("""
+            QPushButton {
+                background-color: #EF476F; 
+                color: white; 
+                border-radius: 5px; 
+                padding: 10px;
+                font-family: Futura;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #FFD166;
+            }
+        """)
+        self.btn_clear_all.move(10, 10)
+        self.btn_clear_all.setCursor(Qt.PointingHandCursor)
+        
+        self.btn_clear_all.clicked.connect(self.clear_scene_action)
+
+    def clear_scene_action(self):
+
+        print("Bouton Effacer tout cliqué !")
+       
 
     #clique sur les boutons
     def mousePressEvent(self, event):
