@@ -4,9 +4,10 @@ from PyQt5.QtWidgets import (QWidget, QFrame, QPushButton,
                              QFormLayout, QLabel, QSpinBox)
 from PyQt5.QtGui import QFont, QColor, QPalette, QPainter
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene
+from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QFileDialog
 
 from gui.items import PlaceItem, TransitionItem, ArcItem
+from logic.updownload import save_petri_net
 
 class Mode:
     #modes différents
@@ -165,6 +166,7 @@ class MainWindow(QWidget):
         self.buttonSave = QPushButton("Save", self.frame_state)
         self.buttonSave.setGeometry(20, 140, 240, 40)
         self.buttonSave.setStyleSheet(self.STYLE_DEFAULT)
+        self.buttonSave.clicked.connect(self.save_action)
 
         self.buttonRapport = QPushButton("Génerer un rapport", self.frame_state)
         self.buttonRapport.setGeometry(20, 200, 240, 40)
@@ -183,7 +185,25 @@ class MainWindow(QWidget):
         self.visual_transitions = {}
         self.visual_arcs = []
 
-        
+    
+    # sauvegarde du réseau de Petri a partir d'une fonction de updownload
+    def save_action(self):
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Petri Net",
+            "",
+            "Petri Net (*.json)"
+        )
+
+        if not filename:
+            return
+
+        save_petri_net(
+            filename = filename,
+            scene = self.view.scene,
+            net = self.net
+        )
+    
 
     def handle_mode_click(self, mode, button):
 
@@ -236,7 +256,7 @@ class MainWindow(QWidget):
             return None
 
         # create visual arc
-        visual = ArcItem(start_item, end_item, weight=arc_backend.weight)
+        visual = ArcItem(start_item, end_item, weight=arc_backend.weight, arc=arc_backend)
         self.view.scene.addItem(visual)
         # link visual to nodes
         start_item.add_arc(visual)

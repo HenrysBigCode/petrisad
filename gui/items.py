@@ -6,6 +6,8 @@ from PyQt5.QtWidgets import (QGraphicsLineItem, QGraphicsEllipseItem,
 from PyQt5.QtGui import QPen, QBrush, QColor, QPolygonF, QFont
 from PyQt5.QtCore import Qt, QLineF, QPointF # pyqtSignal n'est pas utilisé dans cette version, donc retiré.
 
+from logic.petri_net import Arc
+
 # --- Constantes globales pour les styles (optionnel, mais bonne pratique) ---
 PLACE_RADIUS = 30
 TRANSITION_WIDTH = 60
@@ -24,11 +26,12 @@ class ArcItem(QGraphicsLineItem):
     dans une scène QGraphicsView. Il dessine une ligne, une flèche
     et le poids de l'arc.
     """
-    def __init__(self, start_item, end_item, weight=1, parent=None):
+    def __init__(self, start_item, end_item, weight=1, parent=None, arc: Arc=None):
         super().__init__(parent)
         self.start_item = start_item
         self.end_item = end_item
         self.weight = weight
+        self.backend_arc = arc  # Référence à l'arc backend correspondant
 
         self.setPen(QPen(Qt.black, 2))
         self.setZValue(-1) # Les arcs sont derrière les Places/Transitions
