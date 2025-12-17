@@ -210,7 +210,9 @@ class PlaceItem(QGraphicsEllipseItem):
         self.text_token_fallback.setFont(QFont("Arial", 10))
 
 
+
         self.label = QGraphicsTextItem(self.name, parent=self)
+        self.label.setDefaultTextColor(Qt.black) # Couleur du texte en noir
         self.label.setPos(-self.label.boundingRect().width()/2, NODE_LABEL_OFFSET_Y) # Centre le label au-dessus
 
         self.draw_tokens() # Dessine les jetons initialement
@@ -281,6 +283,7 @@ class PlaceItem(QGraphicsEllipseItem):
                 dot.setPos(px, py)
                 self.token_items.append(dot)
 
+
         elif self.tokens > 5:
             # Si trop de jetons, afficher le chiffre au centre
             self.text_token_fallback.setPlainText(str(self.tokens))
@@ -321,6 +324,7 @@ class TransitionItem(QGraphicsRectItem):
         self.arcs = [] # Liste des arcs connectés à cette transition
 
         self.label = QGraphicsTextItem(self.name, parent=self)
+        self.label.setDefaultTextColor(Qt.black) # Couleur du texte en noir
         self.label.setPos(-self.label.boundingRect().width()/2, NODE_LABEL_OFFSET_Y) # Centre le label au-dessus
 
     def add_arc(self, arc):
