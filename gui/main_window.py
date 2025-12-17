@@ -8,6 +8,7 @@ from PyQt5.QtCore import Qt
 from gui.items import PlaceItem, TransitionItem, ArcItem
 from logic.updownload import save_petri_net, load_petri_net
 from logic.coloring import get_graph_coloring
+from logic.report_gen import generate_pdf_report
 
 
 class PetriGraphicsView(QGraphicsView):
@@ -231,6 +232,7 @@ class MainWindow(QWidget):
         self.buttonLoad = QPushButton("Load")
         self.buttonSave = QPushButton("Save")
         self.buttonRapport = QPushButton("Génerer un rapport")
+        self.buttonRapport.clicked.connect(self.handle_generate_report)
 
         for b in [self.buttonColorAlgo, self.buttonState, self.buttonLoad, self.buttonSave, self.buttonRapport]:
             b.setStyleSheet(self.STYLE_DEFAULT)
@@ -250,6 +252,27 @@ class MainWindow(QWidget):
         self.visual_places = {}
         self.visual_transitions = {}
         self.visual_arcs = []
+
+    def handle_generate_report(self):
+            print("Bouton Rapport cliqué...")
+            if not self.net.places and not self.net.transitions:
+                print("Erreur : Réseau vide.")
+                return
+
+            filename, _ = QFileDialog.getSaveFileName(self, "Save PDF", "rapport.pdf", "PDF (*.pdf)")
+            
+            if filename:
+                print(f"Destination choisie : {filename}")
+                try:
+                    from logic.report_gen import generate_pdf_report
+                    print("Lancement de generate_pdf_report...")
+                    generate_pdf_report(self.net, filename)
+                    print("✅ Sauvegarde terminée avec succès !")
+                except Exception as e:
+                    print(f"❌ ERREUR CRITIQUE : {e}")
+                    # Affiche l'erreur complète pour comprendre pourquoi ça ne save pas
+                    import traceback
+                    traceback.print_exc()
 
 
     # fonction utile pour restet l'éditeur
