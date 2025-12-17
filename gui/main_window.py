@@ -7,7 +7,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QFileDialog
 
 from gui.items import PlaceItem, TransitionItem, ArcItem
-from logic.updownload import save_petri_net
+from logic.updownload import save_petri_net, load_petri_net
 
 
 class PetriGraphicsView(QGraphicsView):
@@ -79,10 +79,10 @@ class MainWindow(QWidget):
         self.net = petri_net
         #self.sim = simulation
         
-        #si on est dans le mode d'ajout ou non
+        # si on est dans le mode d'ajout ou non
         self.active_button = None 
 
-        #style en fonction du mode
+        # style en fonction du mode
         self.STYLE_DEFAULT = """
             QPushButton {
                 background-color: #EF476F; 
@@ -154,6 +154,7 @@ class MainWindow(QWidget):
         self.buttonLoad = QPushButton("Load", self.frame_state)
         self.buttonLoad.setGeometry(20, 80, 240, 40)
         self.buttonLoad.setStyleSheet(self.STYLE_DEFAULT)
+        self.buttonLoad.clicked.connect(self.load_action)
 
         self.buttonSave = QPushButton("Save", self.frame_state)
         self.buttonSave.setGeometry(20, 140, 240, 40)
@@ -206,7 +207,35 @@ class MainWindow(QWidget):
             net = self.net
         )
     
+    
+    # ouverture d'un réseau de Petri a partir d'une fonction de updownload
+    def load_action(self):
+        filename, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load Petri Net",
+            "",
+            "Petri Net (*.json)"
+        )
 
+        if not filename:
+            return
+
+        # MainWindow owns the wipe
+        self.reset_editor()
+
+        success, message = load_petri_net(
+            filename = filename,
+            scene = self.view.scene,
+            petri_net = self.net
+        )
+
+        if success:
+            print("Petri net loaded")
+        else:
+            print("Fuck fuck fuckkkk", message)
+    
+    
+    # gestion des clics sur les boutons d'ajout
     def handle_mode_click(self, mode, button):
         # désactivation du mode ajout
         if self.active_button == button:
@@ -291,29 +320,7 @@ class MainWindow(QWidget):
             self.view.scene.removeItem(item)
 
         elif isinstance(item, ArcItem):
-            # remove backend arc: find arc by matching endpoints and direction
-            a = item.start_item.name
-            b = item.end_item.name
-            # try remove both direction possibilities
-            self.net.delete_arc = getattr(self.net, 'delete_arc', None)
-            # our backend doesn't have delete_arc implemented as public; simple approach:
-            # remove matching arcs in net.arcs manually:
-            place = None
-            trans = None
-            if a in self.visual_places:
-                place_name = a; trans_name = b
-            elif b in self.visual_places:
-                place_name = b; trans_name = a
-            else:
-                place_name = None; trans_name = None
-            if place_name and trans_name:
-                # remove arcs that match either direction
-                new_arcs = []
-                for arc in self.net.arcs:
-                    if not ((arc.place.name == place_name and arc.transition.name == trans_name) or
-                            (arc.place.name == place_name and arc.transition.name == trans_name)):
-                        new_arcs.append(arc)
-                self.net.arcs = new_arcs
+            self.net.delete_arc(item.backend_arc.place.name, item.backend_arc.transition.name, item.backend_arc.direction)
 
             item.start_item.remove_arc(item)
             item.end_item.remove_arc(item)
