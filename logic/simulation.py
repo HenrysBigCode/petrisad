@@ -11,7 +11,7 @@ class StateSpaceVisualizer:
     def add_state(self, state_id, marking_data, is_deadlock=False, is_initial=False):
 
         # Formatter le label pour qu'il ne soit pas trop long
-        label = str(marking_data)
+        label = f'"{marking_data}"'
         
         color = 'lightgray' # Couleur de base
         if is_initial: 
