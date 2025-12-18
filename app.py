@@ -1,4 +1,5 @@
 # app.py
+# Point d'entrée principal de l'application
 
 import sys
 from PyQt5.QtWidgets import QApplication

@@ -1,4 +1,5 @@
 # logic/petri_net.py test
+# Classes définissant les structures de données de backend pour un réseau de Petri
 
 # Représente une place dans le réseau de Petri
 class Place:
