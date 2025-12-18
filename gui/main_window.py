@@ -2,7 +2,7 @@
 import math
 from PyQt5.QtWidgets import (QWidget, QFrame, QPushButton,
                              QFormLayout, QLabel, QSpinBox, QHBoxLayout, QVBoxLayout,
-                             QGraphicsView, QGraphicsScene, QFileDialog, QInputDialog, QComboBox)
+                             QGraphicsView, QGraphicsScene, QFileDialog, QInputDialog, QComboBox, QApplication)
 from PyQt5.QtGui import QFont, QColor, QPalette, QPainter, QPen, QBrush
 from PyQt5.QtCore import Qt
 from gui.items import PlaceItem, TransitionItem, ArcItem
@@ -115,7 +115,18 @@ class MainWindow(QWidget):
 
 
     def initUI(self):
-        self.setGeometry(0, 0, 1920, 1080)
+        # Calcul dynamique de la taille selon l'écran pour voir la barres des taches
+        screen = QApplication.primaryScreen().availableGeometry()
+        
+        # On utilise 90% de la largeur et 80% de la hauteur disponible pour ne pas déborder
+        width = int(screen.width() * 0.9)
+        height = int(screen.height() * 0.8) 
+        
+        # Centrage automatique de la fenêtre
+        x = (screen.width() - width) // 2
+        y = (screen.height() - height) // 2
+        
+        self.setGeometry(x, y, width, height)
         self.setWindowTitle("Petri Editor (integrated)")
         self.setStyleSheet("background-color: #073B4C;")
 
@@ -125,7 +136,7 @@ class MainWindow(QWidget):
         self.main_layout.addWidget(self.view, stretch=4)
 
         self.layout_menu = QVBoxLayout()
-        self.layout_menu.setSpacing(20)
+        self.layout_menu.setSpacing(15) # Réduction de l'espacement pour gagner de la hauteur
 
         self.frame_button = QFrame()
         self.frame_button.setFixedWidth(320)
@@ -144,7 +155,8 @@ class MainWindow(QWidget):
 
         self.frame_info = QFrame()
         self.frame_info.setFixedWidth(320)
-        self.frame_info.setMinimumHeight(400) # Légèrement plus grand
+        # CHANGEMENT : On baisse le MinimumHeight à 250 pour permettre à la fenêtre de rétrécir
+        self.frame_info.setMinimumHeight(250) 
         self.frame_info.setStyleSheet("background-color: #FFD166; border-radius: 15px;")
         self.info_layout = QFormLayout(self.frame_info)
         self.info_layout.setContentsMargins(20, 20, 20, 20)
@@ -158,7 +170,7 @@ class MainWindow(QWidget):
         self.buttonColorAlgo = QPushButton("Coloration Graphe (CPN)")
         self.buttonColorAlgo.clicked.connect(self.apply_algorithmic_coloring)
         self.buttonState = QPushButton("Génerer les espaces d'états")
-        self.buttonState.clicked.connect(self.show_state_space_popup)
+        self.buttonState.clicked.connect(self.show_state_space_popup) # Connexion de la simulation
         self.buttonLoad = QPushButton("Load")
         self.buttonLoad.clicked.connect(self.load_action)
         self.buttonSave = QPushButton("Save")
@@ -241,7 +253,6 @@ class MainWindow(QWidget):
                     print("Sauvegarde terminée avec succès")
                 except Exception as e:
                     print(f"ERREUR CRITIQUE : {e}")
-                    # Affiche l'erreur complète pour comprendre pourquoi ça ne save pas
                     import traceback
                     traceback.print_exc()
 
