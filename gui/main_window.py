@@ -1,5 +1,6 @@
 # gui/main_window.py
-import math
+# Point d'entrée principal de l'interface graphique
+
 from PyQt5.QtWidgets import (QWidget, QFrame, QPushButton,
                              QFormLayout, QLabel, QSpinBox, QHBoxLayout, QVBoxLayout,
                              QGraphicsView, QGraphicsScene, QFileDialog, QInputDialog, QComboBox, QApplication)
@@ -7,7 +8,6 @@ from PyQt5.QtGui import QFont, QColor, QPalette, QPainter, QPen, QBrush
 from PyQt5.QtCore import Qt
 from gui.items import PlaceItem, TransitionItem, ArcItem
 from logic.updownload import save_petri_net, load_petri_net
-from logic.coloring import get_graph_coloring
 from logic.report_gen import generate_pdf_report
 
 
@@ -510,13 +510,25 @@ class MainWindow(QWidget):
         self.info_layout.addRow(btn_del)
 
 
+    # applique la coloration algorithmique CPN
     def apply_algorithmic_coloring(self):
         palette = {
             "Integer": QColor("#118AB2"), "String": QColor("#06D6A0"),
             "Boolean": QColor("#FFD166"), "Complex": QColor("#EF476F"),
             "Guard": QColor("#073B4C")
         }
-        coloring_map = get_graph_coloring(self.net)
+        coloring_map = {}
+        
+        for p in self.net.places:
+            name = p.name if hasattr(p, 'name') else str(p)
+            # On récupère le type de donnée de la place
+            coloring_map[name] = getattr(p, 'color_set', 'Integer')
+
+        # Les transitions sont marquées comme ayant des expressions de Garde (G)
+        for t in self.net.transitions:
+            name = t.name if hasattr(t, 'name') else str(t)
+            coloring_map[name] = "Guard"
+        
         for name, data_type in coloring_map.items():
             item = self.visual_places.get(name) or self.visual_transitions.get(name)
             if item:
