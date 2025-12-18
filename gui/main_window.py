@@ -9,6 +9,7 @@ from PyQt5.QtCore import Qt
 from gui.items import PlaceItem, TransitionItem, ArcItem
 from logic.updownload import save_petri_net, load_petri_net
 from logic.report_gen import generate_pdf_report
+from logic.analysis import StateSpaceVisualizer, build_state_space
 
 
 class PetriGraphicsView(QGraphicsView):
@@ -36,7 +37,7 @@ class PetriGraphicsView(QGraphicsView):
     def clear_scene_action(self):
         print("Bouton Effacer tout cliqué !")
 
-    #clique sur les boutons
+    # clique sur les boutons
     def mousePressEvent(self, event):
         pos = self.mapToScene(event.pos())
         item_under_mouse = self.scene.itemAt(pos, self.transform())
@@ -155,7 +156,6 @@ class MainWindow(QWidget):
 
         self.frame_info = QFrame()
         self.frame_info.setFixedWidth(320)
-        # CHANGEMENT : On baisse le MinimumHeight à 250 pour permettre à la fenêtre de rétrécir
         self.frame_info.setMinimumHeight(250) 
         self.frame_info.setStyleSheet("background-color: #FFD166; border-radius: 15px;")
         self.info_layout = QFormLayout(self.frame_info)
@@ -170,7 +170,7 @@ class MainWindow(QWidget):
         self.buttonColorAlgo = QPushButton("Coloration Graphe (CPN)")
         self.buttonColorAlgo.clicked.connect(self.apply_algorithmic_coloring)
         self.buttonState = QPushButton("Génerer les espaces d'états")
-        self.buttonState.clicked.connect(self.show_state_space_popup) # Connexion de la simulation
+        self.buttonState.clicked.connect(self.show_state_space_popup)
         self.buttonLoad = QPushButton("Load")
         self.buttonLoad.clicked.connect(self.load_action)
         self.buttonSave = QPushButton("Save")
@@ -213,15 +213,12 @@ class MainWindow(QWidget):
         self.visual_transitions = {}
         
     def show_state_space_popup(self):
-        """Lance la simulation et affiche l'espace d'états en utilisant simulation.py."""
+        """Lance l'analyse et affiche l'espace d'états en utilisant logic.analysis."""
         if not self.net.places and not self.net.transitions:
             print("Erreur : Le réseau est vide.")
             return
 
         try:
-            # Correction de l'import : on va chercher dans simulation.py
-            from logic.simulation import StateSpaceVisualizer, build_state_space
-            
             # Initialisation du visualiseur
             viz = StateSpaceVisualizer()
             
@@ -232,7 +229,7 @@ class MainWindow(QWidget):
             viz.show_interactive()
             
         except Exception as e:
-            print(f"Erreur lors de l'ouverture de la simulation : {e}")
+            print(f"Erreur lors de l'ouverture de l'espace d'états : {e}")
             import traceback
             traceback.print_exc()
 
@@ -247,7 +244,6 @@ class MainWindow(QWidget):
             if filename:
                 print(f"Destination choisie : {filename}")
                 try:
-                    from logic.report_gen import generate_pdf_report
                     print("Lancement de generate_pdf_report...")
                     generate_pdf_report(self.net, filename)
                     print("Sauvegarde terminée avec succès")
@@ -414,6 +410,7 @@ class MainWindow(QWidget):
         self.clear_properties()
         self.view.scene.update()
 
+    # met à jour le panneau des propriétés
     def update_properties(self, item):
         self.clear_properties()
         style_noir = "color: black; font-weight: bold; font-family: Futura; border: none;"
@@ -475,7 +472,6 @@ class MainWindow(QWidget):
             btn_moins_p = QPushButton("-")
             btn_plus_p = QPushButton("+")
             
-            # On utilise le même style "XL" que pour les jetons
             style_btn_xl = "QPushButton { background-color: transparent; color: black; font-size: 24pt; font-weight: bold; border: 3px solid black; border-radius: 8px; min-width: 60px; min-height: 50px; } QPushButton:hover { background-color: #e6bc5c; }"
             btn_moins_p.setStyleSheet(style_btn_xl)
             btn_plus_p.setStyleSheet(style_btn_xl)

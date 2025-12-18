@@ -1,9 +1,12 @@
 # logic/analysis.py
+# Module pour l'analyse et la visualisation de l'espace d'états d'un réseau de Petri
+
 import networkx as nx
+import matplotlib.pyplot as plt
 from collections import deque
-import pydot
 from logic.petri_net import PetriNet
 
+# Classe pour visualiser l'espace d'états
 class StateSpaceVisualizer:
     def __init__(self):
         self.graph = nx.DiGraph()
@@ -23,8 +26,39 @@ class StateSpaceVisualizer:
     def add_transition(self, source_id, target_id, transition_name):
         self.graph.add_edge(source_id, target_id, label=transition_name)
 
-# --- UTILITAIRES DE MARQUAGE ---
+    def show_interactive(self):
+        """Displays the graph in a popup window using the Tree layout"""
+        node_labels = nx.get_node_attributes(self.graph, 'label')
+        
+        BASE_NODE_SIZE = 1500  
+        SIZE_PER_CHAR = 180    
+        node_sizes = [BASE_NODE_SIZE + len(node_labels.get(n, '')) * SIZE_PER_CHAR for n in self.graph.nodes]
 
+        try:
+            # Try to use Graphviz for Tree layout
+            from networkx.drawing.nx_pydot import graphviz_layout
+            pos = graphviz_layout(self.graph, prog='dot')
+        except Exception as e:
+            # Fallback if Graphviz is not installed
+            print(f"Graphviz not found, using shell layout. Error: {e}")
+            pos = nx.shell_layout(self.graph)
+
+        plt.figure(figsize=(12, 10))
+        colors = [data['color'] for node, data in self.graph.nodes(data=True)]
+        
+        nx.draw_networkx_nodes(self.graph, pos, node_color=colors, node_size=node_sizes, edgecolors='black')
+        nx.draw_networkx_labels(self.graph, pos, labels=node_labels, font_size=9)
+        nx.draw_networkx_edges(self.graph, pos, arrows=True, arrowsize=20, 
+                               connectionstyle='arc3, rad=0.1', edge_color='gray')
+        
+        edge_labels = nx.get_edge_attributes(self.graph, 'label')
+        nx.draw_networkx_edge_labels(self.graph, pos, edge_labels=edge_labels, font_color='blue')
+
+        plt.title("Espace d'États")
+        plt.axis('off') 
+        plt.show()
+
+# fonctions utilitaires pour l'analyse
 def get_marking(net: PetriNet):
     return tuple(p.tokens for p in net.places.values())
 
@@ -44,6 +78,10 @@ def simulate_fire(net: PetriNet, t):
             arc.place.tokens += arc.weight
 
 def build_state_space(net: PetriNet, visualizer: StateSpaceVisualizer):
+    # FORCE le marquage actuel sur le marquage initial pour la simulation
+    for p in net.places.values():
+        p.tokens = p.initial_tokens if hasattr(p, 'initial_tokens') and p.tokens == 0 else p.tokens
+
     seen = {}
     queue = deque()       
     next_id = 0
@@ -81,8 +119,7 @@ def build_state_space(net: PetriNet, visualizer: StateSpaceVisualizer):
             
     apply_marking(net, initial_marking)
 
-# --- ALGORITHMES DE VÉRIFICATION ---
-
+# algrithmes de verification des propriétés
 def checkVivacity(net: PetriNet):
     start_marking = get_marking(net)
     visited = {start_marking}

@@ -1,15 +1,13 @@
+# logic/report_gen.py
+# Module pour la génération de rapports PDF d'analyse de réseaux de Petri
+
 import os
 import matplotlib.pyplot as plt
 import networkx as nx
 from fpdf import FPDF
 from logic.analysis import StateSpaceVisualizer, build_state_space, checkVivacity, checkLoop
 
-
-# fonction pour nettoyer les noms pour viz
-def gv_id(obj_type, name):
-    return f"{obj_type}_{name.replace(':', '_')}"
-
-
+# Génère un rapport PDF contenant l'analyse d'un réseau de Petri
 def generate_pdf_report(net, filename):
     viz = StateSpaceVisualizer()
     build_state_space(net, viz)
@@ -22,7 +20,7 @@ def generate_pdf_report(net, filename):
     img_path = "temp_ss.png"
     plt.figure(figsize=(12, 10)) 
     
-    # --- PROTECTION CONTRE L'ERREUR "DOT NOT FOUND" ---
+    # protection au cas où le graphe est vide
     try:
         # Tente d'utiliser Graphviz pour un rendu en arbre
         from networkx.drawing.nx_pydot import graphviz_layout
@@ -44,7 +42,7 @@ def generate_pdf_report(net, filename):
     plt.savefig(img_path, bbox_inches='tight')
     plt.close()
 
-    # --- GÉNÉRATION PDF (2 PAGES) ---
+    # génération du PDF
     pdf = FPDF()
     
     # PAGE 1 : GRAPHE
@@ -79,6 +77,7 @@ def generate_pdf_report(net, filename):
     pdf.cell(200, 10, txt=f" - Bornitude : Borné ({num_states} états distincts trouvés)", ln=True)
     pdf.cell(200, 10, txt=f" - Cycles structurels : {'Présents' if has_loop else 'Aucun cycle détecté'}", ln=True)
 
+    # Sauvegarde et nettoyage
     pdf.output(filename)
     if os.path.exists(img_path):
         os.remove(img_path)
