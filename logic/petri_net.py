@@ -167,19 +167,7 @@ class PetriNet:
                 new_arcs.append(arc)
         self.arcs = new_arcs
 
-    # Modifie le poids d'un arc
-    def modify_arc_weight(self, place_name, transition_name, direction, new_weight):
-        place = self.places.get(place_name)
-        transition = self.transitions.get(transition_name)
-        if not place or not transition: # safety
-            return
-        
-        for arc in self.arcs: # cherche l'arc à modifier
-            if arc.place == place and arc.transition == transition and arc.direction == direction:
-                arc.weight = new_weight
-                print('success' + str(arc)) # debug tbr
-                return
-
+    # ---- Méthodes d'analyse du réseau ---- ##
     # Donne les arcs entrants
     def get_arcs_entrants(self, transition):
         arcs_entrants = []
@@ -205,7 +193,7 @@ class PetriNet:
                 enabled.append(transition)
         return enabled
     
-    # Debug - affiche le marquage actuel du réseau
+    # affichage debug pourle marquage actuel du réseau
     def display_marking(self):
         print("\n--- Marquage Actuel ---")
         for place in self.places.values():
