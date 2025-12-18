@@ -1,6 +1,7 @@
 # logic/analysis.py
 import networkx as nx
 from collections import deque
+import pydot
 from logic.petri_net import PetriNet
 
 class StateSpaceVisualizer:

@@ -5,7 +5,7 @@ from fpdf import FPDF
 from logic.analysis import StateSpaceVisualizer, build_state_space, checkVivacity, checkLoop
 
 
-# fonction pour netoyer les nomw pur viz
+# fonction pour nettoyer les noms pour viz
 def gv_id(obj_type, name):
     return f"{obj_type}_{name.replace(':', '_')}"
 
@@ -22,20 +22,20 @@ def generate_pdf_report(net, filename):
     img_path = "temp_ss.png"
     plt.figure(figsize=(12, 10)) 
     
-    # --- CHANGEMENT POUR LA LISIBILITÉ EN ARBRE ---
+    # --- PROTECTION CONTRE L'ERREUR "DOT NOT FOUND" ---
     try:
-        # Tente d'utiliser Graphviz pour un vrai rendu en arbre (nécessite pygraphviz ou pydot)
+        # Tente d'utiliser Graphviz pour un rendu en arbre
         from networkx.drawing.nx_pydot import graphviz_layout
         pos = graphviz_layout(viz.graph, prog='dot')
-    except ImportError:
-        # Solution de repli : un layout qui simule une hiérarchie par couches (Shell Layout)
-        # On peut aussi utiliser multipartite_layout si on définit des couches
+    except Exception as e:
+        # Si 'dot' n'est pas installé sur la machine, on utilise un layout de secours
+        print(f"Avertissement : Moteur 'dot' non trouvé. Utilisation du layout alternatif. Erreur: {e}")
         pos = nx.shell_layout(viz.graph)
     
     colors = [data['color'] for node, data in viz.graph.nodes(data=True)]
     labels = nx.get_node_attributes(viz.graph, 'label')
     
-    # Dessin des arêtes avec des courbes pour éviter les superpositions sur les noms
+    # Dessin des arêtes avec des courbes pour éviter les superpositions
     nx.draw(viz.graph, pos, with_labels=True, labels=labels, 
             node_color=colors, node_size=3500, font_size=7, 
             edge_color='gray', arrowsize=20, connectionstyle='arc3, rad=0.1')
