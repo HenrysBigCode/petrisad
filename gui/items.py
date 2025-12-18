@@ -1,4 +1,6 @@
 # gui/items.py
+# Définitions des items graphiques pour les places, transitions et arcs
+
 import math
 from PyQt5.QtWidgets import (QGraphicsLineItem, QGraphicsEllipseItem,
                              QGraphicsRectItem, QGraphicsTextItem, QGraphicsItem)
@@ -13,9 +15,10 @@ TRANSITION_WIDTH = 60
 TRANSITION_HEIGHT = 20
 ARROW_SIZE = 15
 ARROW_ANGLE_DEGREES = 25
-ARC_WEIGHT_TEXT_OFFSET = 15 # Augmenté pour être bien sous l'arc
+ARC_WEIGHT_TEXT_OFFSET = 15
 NODE_LABEL_OFFSET_Y = -45 
 
+# Représente un item visuel arc entre une place et une transition
 class ArcItem(QGraphicsLineItem):
     def __init__(self, start_item, end_item, weight=1, parent=None, arc: Arc=None):
         super().__init__(parent)
@@ -50,8 +53,6 @@ class ArcItem(QGraphicsLineItem):
         self.prepareGeometryChange()
         self.setLine(start_center.x(), start_center.y(), end_center.x(), end_center.y())
 
-    # gui/items.py
-
     def paint(self, painter, option, widget=None):
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setPen(self.pen())
@@ -67,7 +68,7 @@ class ArcItem(QGraphicsLineItem):
 
         if length == 0: return
 
-        # --- CALCUL DU POINT D'ARRÊT (INTERSECTION BORD) ---
+        # calcul du point de fin raccourci pour ne pas dépasser la forme
         if isinstance(self.end_item, TransitionItem):
             # Pour une transition (Rectangle), on calcule l'intersection avec les bords
             rect = self.end_item.rect()
@@ -94,7 +95,7 @@ class ArcItem(QGraphicsLineItem):
         dy_s = p2_shortened.y() - p1.y()
         painter.drawLine(QLineF(p1, p2_shortened))
 
-        # --- DESSIN DE LA FLÈCHE ---
+        # dessin de la flèche
         angle = math.atan2(dy_s, dx_s)
         p_arrow1 = QPointF(
             p2_shortened.x() - ARROW_SIZE * math.cos(angle - math.radians(ARROW_ANGLE_DEGREES)),
@@ -108,7 +109,7 @@ class ArcItem(QGraphicsLineItem):
         painter.setBrush(QBrush(Qt.black))
         painter.drawPolygon(QPolygonF([p2_shortened, p_arrow1, p_arrow2]))
 
-        # --- POIDS (SOUS L'ARC) ---
+        # dessin du poids si > 1
         if self.weight > 1:
             mid_x = (p1.x() + p2_shortened.x()) / 2
             mid_y = (p1.y() + p2_shortened.y()) / 2
@@ -117,6 +118,8 @@ class ArcItem(QGraphicsLineItem):
             perp_y = -dx_s / length * dist
             painter.drawText(QPointF(mid_x + perp_x - 5, mid_y + perp_y + 5), str(self.weight))
 
+
+# Représente un item visuel place dans le réseau de Petri
 class PlaceItem(QGraphicsEllipseItem):
     def __init__(self, x, y, name=None, radius=PLACE_RADIUS):
         super().__init__(-radius, -radius, 2*radius, 2*radius)
@@ -127,7 +130,7 @@ class PlaceItem(QGraphicsEllipseItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges)
 
-        self.name = name if name else "P"
+        self.name = name
         self.tokens = 0
         self.arcs = []
         self.token_items = []
@@ -141,6 +144,7 @@ class PlaceItem(QGraphicsEllipseItem):
         self.draw_tokens()
 
     def add_arc(self, arc): self.arcs.append(arc)
+    
     def remove_arc(self, arc): 
         if arc in self.arcs: self.arcs.remove(arc)
 
@@ -178,7 +182,7 @@ class PlaceItem(QGraphicsEllipseItem):
                 self.token_items.append(dot)
 
         elif self.tokens > 5:
-            # Texte agrandi (Taille 18) quand > 5
+            # On affiche le nombre de jetons en texte > 5
             font = QFont("Arial", 18)
             font.setBold(True)
             self.text_token_fallback.setFont(font)
@@ -192,6 +196,7 @@ class PlaceItem(QGraphicsEllipseItem):
         return self.mapToScene(self.rect().center())
 
 
+# Représente un item visuel transition dans le réseau de Petri
 class TransitionItem(QGraphicsRectItem):
     def __init__(self, x, y, name=None, w=TRANSITION_WIDTH, h=TRANSITION_HEIGHT):
         super().__init__(-w/2, -h/2, w, h)
@@ -202,7 +207,7 @@ class TransitionItem(QGraphicsRectItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges)
 
-        self.name = name if name else "T"
+        self.name = name
         self.arcs = []
 
         self.label = QGraphicsTextItem(self.name, parent=self)
@@ -210,6 +215,7 @@ class TransitionItem(QGraphicsRectItem):
         self.label.setPos(-self.label.boundingRect().width()/2, -40)
         
     def add_arc(self, arc): self.arcs.append(arc)
+    
     def remove_arc(self, arc):
         if arc in self.arcs: self.arcs.remove(arc)
 
