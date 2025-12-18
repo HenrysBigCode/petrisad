@@ -4,6 +4,12 @@ import networkx as nx
 from fpdf import FPDF
 from logic.analysis import StateSpaceVisualizer, build_state_space, checkVivacity, checkLoop
 
+
+# fonction pour netoyer les nomw pur viz
+def gv_id(obj_type, name):
+    return f"{obj_type}_{name.replace(':', '_')}"
+
+
 def generate_pdf_report(net, filename):
     viz = StateSpaceVisualizer()
     build_state_space(net, viz)

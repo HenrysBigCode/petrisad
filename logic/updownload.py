@@ -116,4 +116,4 @@ def load_petri_net(filename, scene, petri_net):
         except KeyError:
             continue
 
-    return True, "OK"
+    return True, "OK", place_items, transition_items

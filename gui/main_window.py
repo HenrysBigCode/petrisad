@@ -198,7 +198,6 @@ class MainWindow(QWidget):
 
         self.visual_places = {}
         self.visual_transitions = {}
-        self.visual_arcs = []
 
     def handle_generate_report(self):
             print("Bouton Rapport cliqué...")
@@ -214,9 +213,9 @@ class MainWindow(QWidget):
                     from logic.report_gen import generate_pdf_report
                     print("Lancement de generate_pdf_report...")
                     generate_pdf_report(self.net, filename)
-                    print("✅ Sauvegarde terminée avec succès !")
+                    print("Sauvegarde terminée avec succès")
                 except Exception as e:
-                    print(f"❌ ERREUR CRITIQUE : {e}")
+                    print(f"ERREUR CRITIQUE : {e}")
                     # Affiche l'erreur complète pour comprendre pourquoi ça ne save pas
                     import traceback
                     traceback.print_exc()
@@ -265,13 +264,15 @@ class MainWindow(QWidget):
         # MainWindow owns the wipe
         self.reset_editor()
 
-        success, message = load_petri_net(
+        success, message, p_items, t_items = load_petri_net(
             filename = filename,
             scene = self.view.scene,
             petri_net = self.net
         )
 
         if success:
+            self.visual_places = p_items
+            self.visual_transitions = t_items
             print("Petri net loaded")
         else:
             print("Fuck fuck fuckkkk", message)
@@ -346,7 +347,6 @@ class MainWindow(QWidget):
             self.view.scene.addItem(visual)
             start_item.add_arc(visual)
             end_item.add_arc(visual)
-            self.visual_arcs.append(visual)
             return {'backend': arc_backend, 'visual': visual}
         except: return None
 
@@ -425,9 +425,48 @@ class MainWindow(QWidget):
             btn_m.clicked.connect(lambda: upd(-1))
             layout_j.addWidget(btn_m); layout_j.addStretch(); layout_j.addWidget(lbl_j); layout_j.addStretch(); layout_j.addWidget(btn_p)
             c = QWidget(); c.setLayout(layout_j); self.info_layout.addRow(c)
-
+            
         elif isinstance(item, TransitionItem):
             self.info_layout.addRow(QLabel(f"ID : {item.name}", styleSheet=style_noir))
+            
+        elif isinstance(item, ArcItem):
+            self.info_layout.addRow(QLabel("TYPE : ARC / LIAISON", styleSheet=style_noir))
+            
+            # Affichage et modification du POIDS de l'arc
+            self.info_layout.addRow(QLabel("POIDS DE L'ARC :", styleSheet=style_noir))
+            
+            layout_poids = QHBoxLayout()
+            btn_moins_p = QPushButton("-")
+            btn_plus_p = QPushButton("+")
+            
+            # On utilise le même style "XL" que pour les jetons
+            style_btn_xl = "QPushButton { background-color: transparent; color: black; font-size: 24pt; font-weight: bold; border: 3px solid black; border-radius: 8px; min-width: 60px; min-height: 50px; } QPushButton:hover { background-color: #e6bc5c; }"
+            btn_moins_p.setStyleSheet(style_btn_xl)
+            btn_plus_p.setStyleSheet(style_btn_xl)
+            
+            lbl_poids = QLabel(str(item.weight))
+            lbl_poids.setAlignment(Qt.AlignCenter)
+            lbl_poids.setStyleSheet(style_noir + "font-size: 20pt;")
+            
+            def adjust_weight(delta):
+                new_weight = max(1, item.weight + delta)
+                item.set_weight(new_weight) # Met à jour le visuel
+                item.backend_arc.weight = new_weight # Met à jour le poids dans le backend (PetriNet)
+                lbl_poids.setText(str(new_weight))
+
+            btn_plus_p.clicked.connect(lambda: adjust_weight(1))
+            btn_moins_p.clicked.connect(lambda: adjust_weight(-1))
+            
+            layout_poids.addWidget(btn_moins_p)
+            layout_poids.addStretch()
+            layout_poids.addWidget(lbl_poids)
+            layout_poids.addStretch()
+            layout_poids.addWidget(btn_plus_p)
+            
+            container_p = QWidget()
+            container_p.setLayout(layout_poids)
+            self.info_layout.addRow(container_p)
+        
 
         btn_del = QPushButton("SUPPRIMER")
         btn_del.setStyleSheet("background-color: transparent; color: black; font-weight: bold; border: 2px solid black; border-radius: 8px; padding: 10px; margin-top: 20px;")
