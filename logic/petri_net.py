@@ -1,23 +1,23 @@
 # logic/petri_net.py test
 
+# Représente une place dans le réseau de Petri
 class Place:
-    # Représente une place dans le réseau de Petri
     def __init__(self, name):
         self.name = name
         self.initial_tokens = 0
         self.tokens = 0
 
-    # Impression débug pour une place, to be deleted?
+    # Impression débug pour une place
     def __repr__(self):
         return f"Place({self.name}, tokens={self.tokens})"
 
 
+# Représente une transition dans le réseau de Petri
 class Transition:
-    # Représente une transition dans le réseau de Petri
     def __init__(self, name):
         self.name = name
 
-    # Impression débug pour une transition, to be deleted?
+    # Impression débug pour une transition
     def __repr__(self):
         return f"Transition({self.name})"
 
@@ -25,28 +25,9 @@ class Transition:
     def is_enabled(self, arcs_entrants):
         return all(arc.place.tokens >= arc.weight for arc in arcs_entrants)
 
-    # Tire la transition, déplaçant les jetons
-    def fire(self, arcs_entrants, arcs_sortants):
-        # Check que la transition peut fire
-        if not self.is_enabled(arcs_entrants):
-            print(f"--- La transition {self.name} n'est pas activée.")
-            return False
 
-        # Consomme les jetons des places en amont
-        for arc in arcs_entrants:
-            arc.place.tokens -= arc.weight
-
-        # Produit les jetons dans les places en aval
-        for arc in arcs_sortants:
-            arc.place.tokens += arc.weight
-        
-        # Impression débug pour une transition tirée
-        print(f"*** La transition {self.name} a été tirée.")
-        return True
-
-
+# Représente un arc reliant une place à une transition ou vice-versa
 class Arc:
-    # Représente un arc reliant une place à une transition ou vice-versa
     def __init__(self, place, transition, direction, weight=1):
         # Check si on créé un arc avec une direction valide, should never be needed
         if direction not in ['place_to_transition', 'transition_to_place']:
@@ -57,7 +38,7 @@ class Arc:
         self.direction = direction
         self.weight = weight
 
-    # Impression débug pour un arc, to be deleted?
+    # Impression débug pour un arc
     def __repr__(self):
         if self.direction == 'place_to_transition':
             return f"Arc({self.place.name} -> {self.transition.name}, Poids={self.weight})"
@@ -65,8 +46,8 @@ class Arc:
             return f"Arc({self.transition.name} -> {self.place.name}, Poids={self.weight})"
 
 
+# Représente l'ensemble d'un réseau de Petri
 class PetriNet:
-    # Représente l'ensemble d'un réseau de Petri
     def __init__(self):
         self.places = {}
         self.transitions = {}
@@ -81,15 +62,14 @@ class PetriNet:
         self.arcs = []
         self.place_counter = 0
         self.transition_counter = 0
-        # TO BE CHANGED IF NEW LOGIC VARIABLES ARE CREATED
 
     ## ---- Méthodes pour les places ---- ##
     # Rajoute une place
     def add_place(self, name = None):
-        if name is None: # nommage automatique
+        if name is None: # nommage automatique si aucun nom est donné
             name = f"P{self.place_counter}"
             self.place_counter += 1
-        elif name in self.places:
+        elif name in self.places: # safety
             raise ValueError("A place with that name already exists.")
 
         place = Place(name)
@@ -99,16 +79,17 @@ class PetriNet:
     # Supprime une place
     def delete_place(self, name):
         place = self.places.pop(name, None)
-        if not place:
+        if not place: # safety
             return
         
+        # Supprime aussi les arcs associés
         new_arcs = []
         for arc in self.arcs:
             if arc.place != place:
                 new_arcs.append(arc)
         self.arcs = new_arcs
 
-    # Definit le nombre de jetons initial d'une place
+    # Update le nombre de jetons initial d'une place et donc son nombre actuel de jetons
     def set_tokens(self, place_name, amount):
         place = self.places.get(place_name)
         if place:
@@ -118,10 +99,10 @@ class PetriNet:
     ## ---- Méthodes pour les transitions ---- ##
     # Rajoute une transition
     def add_transition(self, name=None):
-        if name is None: # nommage automatique
+        if name is None: # nommage automatique si aucun nom est donné
             name = f"T{self.transition_counter}"
             self.transition_counter += 1
-        elif name in self.transitions:
+        elif name in self.transitions: # safety
             raise ValueError("A transition with that name already exists.")
 
         transition = Transition(name)
@@ -131,9 +112,10 @@ class PetriNet:
     # Supprime une transition
     def delete_transition(self, name):
         transition = self.transitions.pop(name, None)
-        if not transition:
+        if not transition: # safety
             return
         
+        # Supprime aussi les arcs associés
         new_arcs = []
         for arc in self.arcs:
             if arc.transition != transition:
@@ -158,7 +140,7 @@ class PetriNet:
             direction = "transition_to_place"
             place = self.places[b_name]
             transition = self.transitions[a_name]
-        else:
+        else: # safety
             raise ValueError("An arc must connect a place and a transition.")
 
         # on vérifie que l'arc n'existe pas déjà
@@ -175,9 +157,10 @@ class PetriNet:
     def delete_arc(self, place_name, transition_name, direction):
         place = self.places.get(place_name)
         transition = self.transitions.get(transition_name)
-        if not place or not transition:
+        if not place or not transition: # safety
             return
         
+        # Recrée la liste des arcs sans celui à supprimer
         new_arcs = []
         for arc in self.arcs:
             if not (arc.place == place and arc.transition == transition and arc.direction == direction):
@@ -188,10 +171,10 @@ class PetriNet:
     def modify_arc_weight(self, place_name, transition_name, direction, new_weight):
         place = self.places.get(place_name)
         transition = self.transitions.get(transition_name)
-        if not place or not transition:
+        if not place or not transition: # safety
             return
         
-        for arc in self.arcs:
+        for arc in self.arcs: # cherche l'arc à modifier
             if arc.place == place and arc.transition == transition and arc.direction == direction:
                 arc.weight = new_weight
                 print('success' + str(arc)) # debug tbr
