@@ -66,6 +66,7 @@ def load_petri_net(filename, scene, petri_net):
             backend_place = petri_net.add_place(name=p["name"])
             petri_net.place_counter += 1
             backend_place.initial_tokens = p["initial_tokens"]
+            backend_place.tokens = p["initial_tokens"]
             item = PlaceItem(p["x"], p["y"], name=backend_place.name)
             
             item.tokens = backend_place.initial_tokens
