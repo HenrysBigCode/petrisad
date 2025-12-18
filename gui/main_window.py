@@ -21,25 +21,6 @@ class PetriGraphicsView(QGraphicsView):
         self.mode = None
         self.temp_arc_start = None
 
-        # Bouton Effacer tout sur la scene
-        self.btn_clear_all = QPushButton("Effacer tout", self)
-        self.btn_clear_all.setStyleSheet("""
-            QPushButton {
-                background-color: #EF476F; 
-                color: white; 
-                border-radius: 5px; 
-                padding: 8px;
-                font-family: Futura;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #FFD166;
-            }
-        """)
-        self.btn_clear_all.move(10, 10)
-        self.btn_clear_all.setCursor(Qt.PointingHandCursor)
-        self.btn_clear_all.clicked.connect(self.clear_scene_action)
-
     # définit le mode d'ajout
     def set_mode(self, mode):
         self.mode = mode
@@ -137,59 +118,6 @@ class MainWindow(QWidget):
         self.setWindowTitle("Petri Editor (integrated)")
         self.setStyleSheet("background-color: #073B4C;")
 
-        """
-        #frame pour mettre boutons
-        self.frame_button = QFrame(self)
-        self.frame_button.setGeometry(720, 20, 280, 250)
-        self.frame_button.setStyleSheet("background-color: #FFD166; border-radius: 10px;")
-
-        #bouton ajout place
-        self.buttonPlace = QPushButton("Ajouter une place", self.frame_button)
-        self.buttonPlace.setGeometry(20, 20, 240, 40)
-        self.buttonPlace.setStyleSheet(self.STYLE_DEFAULT)
-
-        #bouton ajout transition
-        self.buttonTransition = QPushButton("Ajouter une Transition", self.frame_button)
-        self.buttonTransition.setGeometry(20, 80, 240, 40)
-        self.buttonTransition.setStyleSheet(self.STYLE_DEFAULT)
-
-        #bouton ajout arc
-        self.buttonArc = QPushButton("Ajouter un Arc", self.frame_button)
-        self.buttonArc.setGeometry(20, 140, 240, 40)
-        self.buttonArc.setStyleSheet(self.STYLE_DEFAULT)
-
-        #frame pour mettre les infos des places, transitions et arcs
-        self.frame_info = QFrame(self)
-        self.frame_info.setGeometry(720, 290, 280, 150)
-        self.frame_info.setStyleSheet("background-color: #FFD166; border-radius: 10px;")
-        self.info_layout = QFormLayout(self.frame_info)
-
-        #frame pour le bouton d'espace d'état 
-        self.frame_state = QFrame(self)
-        self.frame_state.setGeometry(720, 460, 280, 250)
-        self.frame_state.setStyleSheet("background-color: #FFD166; border-radius: 10px;")
-        self.state_layout = QFormLayout(self.frame_state)
-
-        self.buttonState = QPushButton("Génerer les espaces d'états", self.frame_state)
-        self.buttonState.setGeometry(20, 20, 240, 40)
-        self.buttonState.setStyleSheet(self.STYLE_DEFAULT)
-
-        self.buttonLoad = QPushButton("Load", self.frame_state)
-        self.buttonLoad.setGeometry(20, 80, 240, 40)
-        self.buttonLoad.setStyleSheet(self.STYLE_DEFAULT)
-        self.buttonLoad.clicked.connect(self.load_action)
-
-        self.buttonSave = QPushButton("Save", self.frame_state)
-        self.buttonSave.setGeometry(20, 140, 240, 40)
-        self.buttonSave.setStyleSheet(self.STYLE_DEFAULT)
-        self.buttonSave.clicked.connect(self.save_action)
-
-        self.buttonRapport = QPushButton("Génerer un rapport", self.frame_state)
-        self.buttonRapport.setGeometry(20, 200, 240, 40)
-        self.buttonRapport.setStyleSheet(self.STYLE_DEFAULT)
-        self.buttonRapport.clicked.connect(self.reset_editor)
-        """
-
         self.main_layout = QHBoxLayout(self) # SUS
         self.view = PetriGraphicsView(self)
         self.view.setStyleSheet("background-color: white; border-radius: 10px;")
@@ -227,17 +155,17 @@ class MainWindow(QWidget):
         self.state_v_layout = QVBoxLayout(self.frame_state)
 
         self.buttonColorAlgo = QPushButton("Coloration Graphe (CPN)")
+        self.buttonColorAlgo.clicked.connect(self.apply_algorithmic_coloring)
         self.buttonState = QPushButton("Génerer les espaces d'états")
         self.buttonLoad = QPushButton("Load")
+        self.buttonLoad.clicked.connect(self.load_action)
         self.buttonSave = QPushButton("Save")
+        self.buttonSave.clicked.connect(self.save_action)
         self.buttonRapport = QPushButton("Génerer un rapport")
 
         for b in [self.buttonColorAlgo, self.buttonState, self.buttonLoad, self.buttonSave, self.buttonRapport]:
             b.setStyleSheet(self.STYLE_DEFAULT)
             self.state_v_layout.addWidget(b)
-
-        self.buttonSave.clicked.connect(self.save_action)
-        self.buttonColorAlgo.clicked.connect(self.apply_algorithmic_coloring)
         
         self.layout_menu.addWidget(self.frame_state)
         self.layout_menu.addStretch()
@@ -246,6 +174,25 @@ class MainWindow(QWidget):
         self.buttonPlace.clicked.connect(lambda: self.handle_mode_click('place', self.buttonPlace))
         self.buttonTransition.clicked.connect(lambda: self.handle_mode_click('transition', self.buttonTransition))
         self.buttonArc.clicked.connect(lambda: self.handle_mode_click('arc', self.buttonArc))
+
+        # Bouton Effacer tout sur la scene
+        self.buttonClearAll = QPushButton("Effacer tout", self)
+        self.buttonClearAll.setStyleSheet("""
+            QPushButton {
+                background-color: #EF476F; 
+                color: white; 
+                border-radius: 5px; 
+                padding: 8px;
+                font-family: Futura;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #FFD166;
+            }
+        """)
+        self.buttonClearAll.move(20, 20)
+        self.buttonClearAll.setCursor(Qt.PointingHandCursor)
+        self.buttonClearAll.clicked.connect(self.reset_editor)
 
         self.visual_places = {}
         self.visual_transitions = {}
@@ -326,7 +273,7 @@ class MainWindow(QWidget):
         if ok and name:
             base_name = name
             counter = 1
-            while name in self.visual_places or name in self.visual_transitions:
+            while name in self.visual_places:
                 name = f"{base_name}.{counter}"
                 counter += 1
             
@@ -336,7 +283,15 @@ class MainWindow(QWidget):
             self.view.scene.addItem(item)
             self.visual_places[name] = item
             return {'backend': bp, 'item': item}
-        return None
+        elif ok and not name:
+            bp = self.net.add_place()
+            item = PlaceItem(x, y, name=bp.name)
+            item.color_set = "Integer" 
+            self.view.scene.addItem(item)
+            self.visual_places[bp.name] = item
+            return {'backend': bp, 'item': item}
+        else:
+            return None
 
     def create_transition_at(self, x, y):
         name, ok = QInputDialog.getText(self, 'Nouvelle Transition', 'Entrez le nom :')
@@ -352,7 +307,14 @@ class MainWindow(QWidget):
             self.view.scene.addItem(item)
             self.visual_transitions[name] = item
             return {'backend': bt, 'item': item}
-        return None
+        elif ok and not name:
+            bt = self.net.add_transition()
+            item = TransitionItem(x, y, name=bt.name)
+            self.view.scene.addItem(item)
+            self.visual_transitions[bt.name] = item
+            return {'backend': bt, 'item': item}
+        else:
+            return None
     
     def create_arc_between(self, start_item, end_item):
         try:
