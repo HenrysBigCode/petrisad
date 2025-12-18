@@ -158,6 +158,7 @@ class MainWindow(QWidget):
         self.buttonColorAlgo = QPushButton("Coloration Graphe (CPN)")
         self.buttonColorAlgo.clicked.connect(self.apply_algorithmic_coloring)
         self.buttonState = QPushButton("Génerer les espaces d'états")
+        self.buttonState.clicked.connect(self.show_state_space_popup)
         self.buttonLoad = QPushButton("Load")
         self.buttonLoad.clicked.connect(self.load_action)
         self.buttonSave = QPushButton("Save")
@@ -198,6 +199,30 @@ class MainWindow(QWidget):
 
         self.visual_places = {}
         self.visual_transitions = {}
+        
+    def show_state_space_popup(self):
+        """Lance la simulation et affiche l'espace d'états en utilisant simulation.py."""
+        if not self.net.places and not self.net.transitions:
+            print("Erreur : Le réseau est vide.")
+            return
+
+        try:
+            # Correction de l'import : on va chercher dans simulation.py
+            from logic.simulation import StateSpaceVisualizer, build_state_space
+            
+            # Initialisation du visualiseur
+            viz = StateSpaceVisualizer()
+            
+            # Construction de l'espace d'états
+            build_state_space(self.net, viz)
+            
+            # Lancement de la fenêtre interactive Matplotlib
+            viz.show_interactive()
+            
+        except Exception as e:
+            print(f"Erreur lors de l'ouverture de la simulation : {e}")
+            import traceback
+            traceback.print_exc()
 
     def handle_generate_report(self):
             print("Bouton Rapport cliqué...")
